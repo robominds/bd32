@@ -72,6 +72,7 @@ static void LPT_FillWord (LONG Where, WORD Data);
 static void LPT_FillLong (LONG Where, LONG Data);
 static LONG LPT_GetReg (unsigned which);
 static void LPT_PutReg (unsigned which, LONG Data);
+static void delay (unsigned count);
 
 struct TargetInfo LPTInfo =
 {

@@ -70,6 +70,7 @@ static void ICD_FillWord (LONG Where, WORD Data);
 static void ICD_FillLong (LONG Where, LONG Data);
 static LONG ICD_GetReg (unsigned which);
 static void ICD_PutReg (unsigned which, LONG Data);
+static void delay (unsigned count);
 
 struct TargetInfo ICDInfo =
 {

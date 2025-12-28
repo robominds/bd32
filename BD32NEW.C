@@ -2512,6 +2512,33 @@ void put_srec (srecord *data, LONG load_offset)
 		address++;
 	}
 }
+
+void put_srecf (srecord *data, LONG load_offset)
+{
+	LONG temp, address;
+	BYTE reclen, *where;
+
+	if (data->reclen < 5) return;
+	reclen = data->reclen - 4;
+	address = data->address;
+	if (data->rectype >= '7' && data->rectype <= '9')
+	{
+		execute_address = address;
+		return;
+	}
+	if (data->rectype == '0') return;
+	where = (BYTE *) data->bytes;
+
+	while(reclen > 0) {
+		temp = sr_fetch (&where, &reclen);
+		PUTBYTE (load_offset + 0x555, 0xaa);
+		PUTBYTE (load_offset + 0x2aa, 0x55);
+		PUTBYTE (load_offset + 0x555, 0xa0);
+		PUTBYTE (address, temp);
+		address++;
+	}
+}
+
 int _do_load (LONG, FILE *);
 
 int do_load (int argc, char **argv)
@@ -2587,6 +2614,127 @@ int _do_load (LONG load_offset, FILE *infile)
 	restore_fc ();
 	if (execute_address) PUTREG (REG_PC, execute_address + load_offset);
 	lowest += load_offset;
+	return error;
+}
+
+int _do_loadf (LONG, FILE *);
+
+int do_loadf (int argc, char **argv)
+{
+	char *filename;
+	int error;
+	LONG load_offset = 0L;
+
+	filename = argv[1];
+	if (argc == 3) if (gethex (argv [2],&load_offset))
+	{
+		report_error (eval_error, argv [2]);
+		return eval_error;
+	}
+	if (argc < 2)
+	{
+		if (!getfilename ()) return -1;
+		filename = commandline;
+	}
+	if ((infile = fopen (filename,"r")) == NULL)
+	{
+		pf ("Cannot open file %s\n",filename);
+		return -2;
+	}
+	error = _do_loadf (load_offset, infile);
+	fclose (infile);
+	if (UseWindows) DISPLAYCODE;
+	return error;
+}
+
+int _do_loadf (LONG load_offset, FILE *infile)
+{
+	srecord buff;
+	int error, rcount;
+
+	execute_address = 0;
+	lowest = 0xffffffffL;
+	*last_cmd = '\0';
+	stop_chip ();
+	set_fc ();
+	for (error = rcount = 0; !error; rcount++)
+	{
+		if (check_esc ()) break;
+		error = do_srec (&buff, infile);
+		if (!error || error == SREC_S9) put_srecf (&buff,load_offset);
+		pc ('+');
+	}
+	pc ('\n');
+	switch (error)
+	{
+		case SREC_EOF:
+		pf ("EOF Reached before S9 record on line %d\n", rcount);
+		break;
+
+		case SREC_CHECKSUM:
+		pf ("Checksum error on line %d\n", rcount);
+		break;
+
+		case SREC_S9:
+		pf ("Download completed OK - %d records read\n", rcount);
+		error = 0;
+		break;
+
+		case SREC_FORMAT:
+		pf ("Format error on line %d - file probably not S-records\n",
+			rcount);
+		break;
+
+		default:
+		pf ("Internal error - do_srec returned %d on line %d\n",
+			error, rcount);
+	}
+	restore_fc ();
+	if (execute_address) PUTREG (REG_PC, execute_address + load_offset);
+	lowest += load_offset;
+	return error;
+}
+
+int _do_erasef (LONG, int);
+
+int do_erasef (int argc, char **argv)
+{
+	LONG sector;
+	int error;
+	LONG load_offset = 0L;
+
+	if (argc == 3) if (gethex (argv [2],&load_offset))
+	{
+		report_error (eval_error, argv [2]);
+		return eval_error;
+	}
+
+	if (argc == 2) if (gethex (argv [2],&sector))
+	{
+		report_error (eval_error, argv [2]);
+		return eval_error;
+	}
+
+	error = _do_erasef (load_offset, (int)sector);
+
+	if (UseWindows) DISPLAYCODE;
+	return error;
+}
+
+int _do_erasef (LONG load_offset, int sector)
+{
+	int error;
+
+	PUTBYTE (load_offset + 0x555, 0xaa);
+	PUTBYTE (load_offset + 0x2aa, 0x55);
+	PUTBYTE (load_offset + 0x555, 0x80);
+	PUTBYTE (load_offset + 0x555, 0xaa);
+	PUTBYTE (load_offset + 0x2aa, 0x55);
+	if(sector < 0) {
+	  PUTBYTE (load_offset + 0x555, 0x10);
+	} else {
+	  PUTBYTE (load_offset + ((sector&0xf)<<16), 0x30);
+	}
 	return error;
 }
 
@@ -2952,12 +3100,14 @@ struct cmd_table commands [] = {
 { "DO",    "<filename>               Execute commands from macro file", do_macro},
 { "DOS",   "[<command line>]         Execute DOS from within BD32", do_dos},
 { "DRIVER","[<expression>]           Set load address for Target Drivers", do_driver },
+{ "EF",    "[<sector>] [<offset>]    Erase Flash", do_erasef},
 { "EVAL",  "<expression>             Evaluate Arithmetic Expression", do_eval},
 { "EXIT",  "                         End BD32, return to DOS", quit},
 { "FC",    "[<expression>]           Set FC0-2 for Debugger Memory Access", do_fc},
 { "GO",    "[<address>]              Start Target MCU", do_go},
 { "HELP",  "                         Display This Command Summary", do_help},
 { "LO",    "<filename> [<offset>]    Load S-record file from disk", do_load},
+{ "LF",    "<filename> [<offset>]    Load S-record file from disk to Flash", do_loadf},
 { "LOG",   "[OFF | <filename>]       Log BD32 output to disk file", do_log},
 { "MD",    "[<address> [<count>]]    Memory Display (;b, ;w, ;l, ;di) (ESC halts)", do_dump},
 { "MM",    "[<address>]              Memory Modify  (;b, ;w, ;l, ;di)", do_memory},

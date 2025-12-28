@@ -1,0 +1,137 @@
+Include:    <dos.h>
+
+Prototype:  void _harderr(void (far *fptr)());
+	    void _hardresume(int result);
+	    result:   _HARDERR_IGNORE  _HARDERR_RETRY
+		      _HARDERR_ABORT   _HARDERR_FAIL
+	    void _hardretn(int error);
+
+See also:   _chain_intr, _dos_getvect, _dos_setvect
+
+The _harderr routine establishes the user-defined routine that fptr points
+to as the handler for DOS INT 0x24, which is invoked when a hardware error
+occurs during the execution of an I/O request (for example, attempting to
+read from a floppy disk when the drive door isn't closed). See the MS-DOS
+Encyclopedia or the Programmer's PC Sourcebook for more information on INT
+0x24.
+
+			    ----- Note -----
+The statement _hardresume ( _HARDERR_ABORT ) cannot be used within the
+QuickC environment since it interferes with the QuickC critical error handler.
+			    ----------------
+
+The _harderr function doesn't directly install the handler that fptr points
+to; instead,_ harderr installs a handler that calls the function that fptr
+references. The handler calls the function with the following parameters:
+
+     handler(unsigned deverror, unsigned errcode, unsigned far *devhdr);
+
+The deverror argument is the device error code and contains the AX register
+value that DOS passes to the INT 0x24 handler. The errcode argument is the
+DI register value that DOS passes to the handler. The low-order byte of
+errcode can be one of the following values:
+
+       Code    Meaning
+	0      Attempt to write to a write-protected disk
+	1      Unknown unit
+	2      Drive not ready
+	3      Unknown command
+	4      Cyclic-redundancy-check (CRC) error in data
+	5      Bad drive-request structure length
+	6      Seek error
+	7      Unknown media type
+	8      Sector not found
+	9      Printer out of paper
+	A      Write fault
+	B      Read fault
+	C      General failure
+
+The devhdr argument is a far pointer to a device header that contains
+descriptive information about the device on which the error occurred. The
+user-defined handler must not change the information in the device-header
+control block.
+
+If the error occurred on a disk device, the high-order bit (bit 15) of the
+deverror argument will be set to 0 and the deverror argument will indicate
+the following:
+
+       Bits    Meaning
+       15      Disk error if false (0).
+       14      Not used
+       13      "Ignore" response not allowed if false.
+       12      "Retry" response not allowed if false.
+       11      "Fail" response not allowed if false (MS-DOS changes "fail"
+	       to "abort").
+       9-10    Code        Location
+		00         DOS
+		01         File Allocation Table (FAT)
+		10         Directory
+		11         Data area
+       8       Read error if false; write error if true
+
+The low-order byte of deverror indicates the drive where the error occurred
+(0 = drive A, 1 = drive B, etc.)
+
+If the error occurs on a device other than a disk drive, the high-order bit
+(bit 15) of deverror will be 1. The attribute word located at offset 04 in
+the device-header block will indicate the type of device which had the
+error. If bit 15 of the attribute word is 0, the error is a bad memory image
+of the File Allocation Table. If the bit is instead 1, the error occurred on
+a character device and bits 0-3 of the attribute word indicate the type of
+device:
+
+       Bit     Meaning
+	3      Current clock device
+	2      Current null device
+	1      Current standard output
+	0      Current standard input
+
+The user-defined handler function can issue system calls 0x01 through 0x0C
+only, or 0x59. Thus, many of the standard C run-time functions (such as
+stream I/O and low-level I/O) cannot be used in a hardware error handler.
+Function 0x59 may be used to obtain further information about the error that
+occurred.
+
+If the handler returns, it can do so using any of these three methods:
+
+	*  By way of the return statement
+	*  By way of the _hardresume function
+	*  By way of the _hardretn function
+
+If the handler returns by way of _hardresume or a return statement, the
+handler returns to DOS. If the handler returns by way of _hardretn, the
+handler bypasses DOS and returns to the application at the point just past
+the failing I/O function request.
+
+The _hardresume function should only be called from within the user-defined
+hardware error handler function. This function allows the user to return
+from the handler to MS-DOS, as will returning from the handler using a
+return statement.
+
+The result supplied to _hardresume must be one of the following constants:
+_HARDERR_IGNORE, _HARDERR_RETRY, _HARDERR_ABORT, or _HARDERR_FAIL.
+
+The _hardretn function allows the user-defined hardware error handler to
+return directly to the application program rather than returning to DOS.
+The application resumes at the point just after the failing I/O function
+request. The _hardretn function should only be called from within a user-
+defined hardware error handler function.
+
+The error parameter of _hardretn should be an DOS error code, as opposed
+to the XENIX-style error code that is available in errno. For information
+about the DOS error codes which may be returned by a given DOS
+function call, refer to the MS-DOS Encyclopedia or the Programmer's PC
+Sourcebook.
+
+If the failing I/O function request is an INT 0x21 function greater than or
+equal to function 0x38, then _hardretn will return to the application with
+the carry flag set and the AX register set to the _hardretn error parameter.
+If the failing INT 0x21 function request is less than function 0x38 and the
+function can return an error, the AL register will be set to 0xFF on return
+to the application. If the failing INT 0x21 does not have a way of returning
+an error condition (this is true of certain INT 0x21 functions below 0x38),
+the error parameter of _hardretn is not used and no error code is returned
+to the application.
+
+Return Value
+None.

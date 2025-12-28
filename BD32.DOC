@@ -1,0 +1,1582 @@
+BD32 Version 1.2
+================
+
+May, 1994
+
+Introduction to BD32
+====================
+
+BD32 ("Background mode Debugger") is a debug monitor for any Motorola
+microcontroller which is based on the CPU32 processor core.  This includes
+(currently) the MC68330, MC68331, MC68332, MC68F333, and the MC68340.  BD32
+runs on a host IBM compatible PC, controlling the prototype through the
+background debug mode (BDM) interface on CPU32.  The Motorola BCC Development
+Interface (BCCDI) card may be used; the interface to the BCCDI is done using
+either the COM1 or COM2 serial RS-232 port on the PC.  The BDM signals may also
+be controlled directly by the PC through a special adapter connected to the
+PC's parallel printer port, LPT1 or LPT2.  Motorola offers an adapter card
+called the ICD card, part no. M68ICD32.  Alternatively, the user may
+construct his own from a circuit schematic included in this archive file.
+(The construction details for this adapter are given later in the section
+'Connections - using Cable to BDM Connector').
+
+BD32 presents a command-line-driven debug environment.  The command
+set is very similiar to that presented by the CPU32Bug software
+resident in the Business Card Computer's EPROM.  The key difference is
+that since BD32 controls the processor through the the Background Mode
+Interface of the CPU32 processor core, no user resources on the
+microcontroller are needed to achieve the emulation.  This means
+that the chip selects which are connected to the EPROM and RAM on the
+BCC may be disconnected and used in the target application.  Also the on-chip
+SCI port, which is the console port for CPU32Bug, is not required and may
+be used in the target application.  Thus a true transparent emulation of
+the microcontroller is achieved, similiar to Motorola's EVM and EVS series
+of emulators for the 8-bit microcontrollers.
+
+This approach to program debugging brings other benefits as well.  The BCCDI
+card has on it a breakpoint gate array, which allows 4 hardware
+breakpoints.  This is used by BD32 via the 'BR' (breakpoint) commmand.
+BD32 also supports more sophisticated debug capabilities such as symbol
+support.  Since BD32 resides on a host PC rather than in the user's
+target application, more resources are available to allow this type of
+feature.
+
+Connections - using BCCDI card
+==============================
+
+To operate with the BCCDI, BD32 requires that the 68HC11 on the DI
+board contain software version 1.00 through 1.13.  This BCCDI may be
+identified by the presence of the XC68HC811E2 microcontroller on the
+board; the later version of the DI software, implemented with the
+XC68HC711E9 microcontroller, will not work with BD32.  The BCCDI
+must be connected to the PC through either COM1 or COM2 serial ports.
+
+One drawback of using the DI card is that its serial protocol is rather
+inefficient, making for slow program downloads.  By using the parallel
+printer port adapter, download speed will increase approximately by a
+factor of five.
+
+Connections - using Motorola's ICD32
+====================================
+
+BD32 version 1.2 and later contains a driver to allow control of the target
+microcontroller through a product called ICD32, available from Motorola under
+part number M68ICD32.  This board connects to an IBM-compatible PC via its
+parallel printer port, and has a ribbon cable which connects to an 8 or 10-pin
+BDM connector on the target system.  BD32 can control the ICD card on either
+the LPT1 or LPT2 printer ports of the PC.
+
+Connections - using Cable to BDM Connector
+==========================================
+
+BD32 can also control the target microcontroller through a public-domain
+adapter circuit.  This adapter uses two commonly available logic chips, a
+74HC132 quad Schmitt NAND gate and a 74HC76 dual J-K flip flop.  The
+schematic for the circuit is in the disk file 'bdm-if.sch' (created under
+Orcad) which should have been included with this documentation.  If you do
+not have access to the Orcad schematic editor program, the file 'bdm-if.prn'
+is the same schematic formatted for output to an Epson-compatible dot-matrix
+printer.  Simply copying this file to your printer will produce a hard
+copy of the schematic for the adapter.  NOTE:  the unarchived size of this
+file is about 500 Kbytes, so you may want to use your de-archiving utility to
+dump the file directly to your printer if you are short of hard disk
+space!  This may be done with the following DOS command (using the 'pkunzip'
+de-archive utility from PKWare, Inc.):
+
+pkunzip -p bd32v1-2 bdm-if.prn
+
+The adapter circuit will operate with either the LPT1 or LPT2 parallel
+ports on your PC compatible computer.  The 8-pin connector labeled 'BCC
+Background Mode Connector' should be plugged into the corresponding
+8-pin connector on the Business Card Computer (P3 on the 68332 BCC) or
+connector P11 on the 68332 Platform Board (PFB).
+Operation
+=========
+
+After the DI is connected and powered up, BD32 is invoked by entering
+'BD32' at the PC-DOS command line.  BD32 will support either the
+normal 25-line display, or the 50-line VGA or 43-line EGA display
+mode; whichever mode is in use when BD32 is executed will be used by
+BD32.  If the user has access to a VGA or EGA display, it is
+recommended that BD32 be used with the 43/50 line mode, as it greatly
+improves the usability of the program.
+
+BD32 starts by looking for the disk file 'bd32.cfg' in the default
+disk drive and directory, or in the directory from which 'bd32.exe' was
+executed.  If it finds the file, it reads the first two lines to determine
+the communications baud rate and I/O port to use to talk to the target.
+Four ports are supported, COM1, COM2, LPT1, and LPT2.  If 'bd32.cfg' is
+not found, or if it is found but there is an illegal value entered in the
+file, then the interface port is not configured and no target debug
+operations can proceed until the port is selected (using the 'port' command,
+see below).  If it is possible to configure the port, then communication
+begins with the target system (indicated by the status line at the bottom
+of the screen).
+
+An example 'bd32.cfg' might look like this:
+
+COM1
+9600
+
+The above example configures BD32 to use the BCC Development Interface board,
+connected to COM1 serial port at a baud rate of 9600 baud.  BD32 supports any
+rate from 110 baud to 9600, but the BCCDI can only be configured for either 9600
+baud or 1200 baud.  9600 baud is recommended for best operation.
+
+Another example for 'bd32.cfg' is shown below:
+
+LPT1
+1
+
+This example tells BD32 to use the BDM adapter connected to parallel
+port LPT1.  When the parallel port is used, the second parameter is not
+really a 'baud rate'.  It actually specifies the a delay count to use when
+transferring data serially to the BDM interface.  This is needed because if
+the target will be running at slow CPU clock rates, the PC can overrun the
+BDM interface and data transfers will not execute properly.
+
+The table below serves as a guide to determine the minimum setting for this
+parameter.  The parameter actually used may need to be set higher to account
+for variations in external hardware, such as cables and interface circuit
+construction.
+
+PC Clock Speed
+(in MegaHertz)                   Delay Parameter
+===============================================================
+Processor:     XT          286,386       486          Pentium
+4.77            0             0
+8               0             0
+10              0             0
+12                            0
+16                            1
+20                            2           10
+25                            3           12
+33                            5           15
+40                            8           20
+50                                        25
+60                                        30            75
+66                                        35            85
+75  (est.)                                40            95
+83  (est.)                                50           110
+100 (est.)                                60           130
+===============================================================
+
+Here is another example which uses the Motorola ICD card on parallel printer
+port LPT2:
+
+ICD2
+5
+
+The keyword 'ICD' indicates that the Motorola ICD card is being used; the number
+after the 'ICD' keyword indicates to which parallel printer port (LPT1 or LPT2)
+the ICD card is connected.  The '5' parameter specifies a delay of 5 delay loops
+per bit.
+
+After the configuration file has been read, BD32 looks at the command line
+with which it was invoked.  Any text which the user entered after the name
+'BD32' will be executed as a BD32 command.  Multiple commands may be
+separated with the comma (,) character.  For example, invoking BD32 with
+the following DOS command line
+
+BD32 md $4000
+
+will cause BD32 to immediately display target memory at address $4000,
+after it finishes initialization.
+
+After all commands on the command line have been executed, BD32 will
+present a prompt and wait for the user to type a command.  As on the DOS
+command line, the BD32 command line typed by the user may contain multiple
+commands separated by the comma character.  Also, the user may repeat
+execution of the previous command typed, simply by pressing the 'enter' key.
+BD32 Screen Display
+===================
+
+When BD32 starts up, it sets up the screen display with a single status
+line at the bottom, and the remainder as a scrolling command window.
+The user is prompted for command input here, and all command output is
+displayed here as well.  This is the standard 'glass teletype' style
+display which is so commonly used.
+
+BD32 shows the status of the target system on the bottom line of the
+PC's screen.  If no communications have been established with the target
+system, then the status line shows simply a copyright message.  When
+communication is established with the target microcontroller, then the status
+line will show the state of the HALT, FREEZE, and RESET signals from the
+target microcontroller, as well as the processor state ('RUNNING' or 'STOPPED').
+This is updated approximately 20 times per second.
+
+NOTE:  when using the parallel adapter circuit, the status of the HALT
+signal is not available from the BDM connector and so is not shown on
+the screen.  The status line update rate is much faster (about 200 times/second)
+and the status line can also indicate when the program has stopped on a
+breakpoint, by displaying 'BRKPNT' instead of 'STOPPED' in the CPU status field.
+
+If the user desires, a 'windowed' display may be substituted for this non-
+windowed 'glass teletype' interface.  The command 'window on' enables
+the windowed display.
+
+When using the windowed display, BD32 formats the screen into three 'panels'
+plus the status line.  At the top of the screen is a panel showing the contents
+of the target CPU registers.  This panel is updated whenever the target CPU
+stops execution, whether from a breakpoint, user command, or other reason.
+
+The middle panel displays the contents of memory, either a disassembly into
+CPU32 mnemonics ('DASM' command) or a memory hex-ASCII display ('MD'
+command).  Each time the target CPU stops execution, this panel is updated to
+show the code around to location addressed by the target CPU program counter.
+The instruction pointed to by the program counter is highlighted in cyan; any
+visible breakpoints are highlighted in red, and 'B*' is displayed at the far
+left of the disassembly.  Whenever the user enters the 'MD' (memory
+dump) command, its output is also displayed in this panel; however it
+will be replaced by the disassembled code again when the next trace
+('T') or step ('S') command is issued.
+
+The bottom panel provides command line entry for the user.  BD32
+displays a prompt here when ready for commands, and most commands
+display their results here also.
+
+The command 'window off' will restore the non-windowed user interface.
+
+Screen Colours
+==============
+
+BD32's default display colours are fine for use on a colour CRT, but some
+systems such as laptop computers do not display gray scales very well.  BD32
+Version 1.2 and later allows the user to set screen colours in the
+configuration file 'bd32.cfg'.
+
+If the configuration file contains more than two lines of text, the
+following lines are scanned and converted to colour attributes to define the
+colour settings for the screen display.  The attributes are read, line
+by line, from the config file in the following order:
+_______________________________________________________________________________
+Line Number     Attribute               Description                     Default
+in bd32.cfg                                                             Value*
+3               Command Output Colour   Attribute used to display       30
+					command output
+4               Command Input Colour    User input at command prompt    31
+5               Prompt Colour           Command prompt ("BD32->")       23
+6               Register Display Colour Used to highlight CPU register  31
+					display
+7               Breakpoint Colour       Colour used to highlight        79
+					breakpoint locations in
+					disassembled code
+8               PC Colour               Used to highlight code          48
+					addressed by Program Counter
+9               Status Line Colour      Used for non-highlighted        112
+                                        characters on status line
+                                        (bottom of screen)
+10              Status Item Colour      Colour used for highlighted     116
+                                        items on status line
+11              Border Colour           Colour used to draw borders     31
+                                        around screen panels
+
+* - See colour table at end of this section
+_______________________________________________________________________________
+
+Reaching the end of the configuration file, or any line of text in the
+configuration file which cannot successfully interpreted as a decimal
+number, will cause BD32 to stop reading the configuration file.
+
+Colour attributes are specified in decimal.  They correspond to the
+attributes used by the IBM PC's display adapters hardware.  Both foreground and
+background colour can be specified, as well as intensity.
+
+To calculate the required attribute value, take the desired foreground and
+background colour from the table below, and add them together.  To cause
+the character to blink, add the value 128 to the result.  Then use a
+text editor to enter the value at the appropriate line in the 'bd32.cfg'
+disk file, and BD32 will then use that attribute.
+
+Foreground Colour       Value           Background Colour       Value
+=====================================================================
+Black                   0               Black                   0
+Blue                    1               Blue                    16
+Green                   2               Green                   32
+Cyan                    3               Cyan                    48
+Red                     4               Red                     64
+Magenta                 5               Magenta                 80
+Brown                   6               Brown                   96
+White                   7               White                   112
+Gray                    8
+Light Blue              9
+Light Green             10
+Light Cyan              11
+Light Red               12
+Light Magenta           13
+Yellow                  14
+Bright White            15
+
+BD32 Symbol Support
+=====================
+
+BD32 allows the user to enter symbols in addition to hex and decimal
+constants when entering parameters for commmands.  This is implemented
+by the 'set' command.  For example, to display a block of memory, the
+MD command may be used as shown below:
+
+md $4000                (display 256 bytes starting at hex $4000)
+md 0x4000               (alternate 'C'-like form of expressing hex number)
+md 16384                (same as above, only using decimal number)
+set start $4000         (gives the symbol 'start' the hex value $4000)
+md start                (looks up the value of start, uses that as starting
+			address)
+
+The registers in the target CPU have their names pre-defined in the symbol
+table, and any references to these names will return the value contained in
+the register.  The user should not create symbols which have the same names
+as CPU registers, such as A1, D3, PC, VBR etc.
+
+Also, it is important to remember to prefix any hex numbers with the '$'
+character or with '0x'.  Failing to do this can lead to some interesting
+results!
+
+BD32 Expression Evaluation
+==========================
+
+In addition to supporting symbols, BD32 allows command parameters to be
+specified in the form of a complex expression.  Building on the previous
+example, the MD command may also have the following form:
+
+md $4000                (use the hex value $4000 as starting address)
+set start $4000         (define a symbol)
+md start+2*3            (finds value of 'start', and adds 6 to it)
+md (start+2)*3          (finds value of 'start', adds 2, multiplies the
+			result by 3)
+
+In general, any command which needs a numeric parameter will accept an
+expression to define that parameter.  The form of the expression is the
+same as the 'C' programming language, in that most of the same operators
+are allowed and they follow the same precedence as the 'C' language.
+
+Whenever an error is detected in the syntax of an expression, the user is
+notified, either by displaying the erroneous line and a pointer underneath the
+offending character, or displaying the name of the undefined symbol depending
+on the type of error encountered.  Three types of errors are possible:
+undefined symbols (usually a misspelled symbol name), illegal characters (an
+unrecognized character in an expression), or illegal operators (an
+unrecognized sequence of operator characters).
+
+Below is a list of operators accepted by BD32, in order of decreasing
+precedence.
+
+Symbol        Name or Meaning                         Associativity
+
+----------------------------Highest Precedence--------------------------------
+  ( )         Parentheses                             Left to right
+------------------------------------------------------------------------------
+  !           Logical NOT                             Right to left
+  ~           Bitwise NOT
+  -           Minus
+  *<address>[<.B|W|L>]  Indirection - get value at memory address using given
+			size (default size is word if non specified)
+------------------------------------------------------------------------------
+  *           Multiply                                Left to right
+  /           Divide
+  %           Remainder
+------------------------------------------------------------------------------
+  +           Add                                     Left to right
+  -           Subtract
+------------------------------------------------------------------------------
+  <<          Left shift                              Left to right
+  >>          Right shift
+------------------------------------------------------------------------------
+  <           Less than                               Left to right
+  <=          Less than or equal to
+  >           Greater than
+  >=          Greater than or equal to
+------------------------------------------------------------------------------
+  ==          Equal                                   Left to right
+  !=          Not equal
+------------------------------------------------------------------------------
+  &           Bitwise AND                             Left to right
+------------------------------------------------------------------------------
+  ^           Bitwise exclusive OR                    Left to right
+------------------------------------------------------------------------------
+  |           Bitwise OR                              Left to right
+------------------------------------------------------------------------------
+
+Indirection
+===========
+
+Some C operators, such as the increment/decrement operators ++ and --, are
+not supported since they make no sense in this context.  One operator, the
+indirection operator '*', was modified slightly for use with CPU32 assembly
+language.  In C this operator might be used in this way:
+
+a = *pointer + 6;
+
+This would also be legal in BD32, but for the purposes of assembly language
+debugging it is important to be able to specify the size of the operand (in
+the C language it is specifed when the symbol is defined).  So in BD32 it
+might be used this way:
+
+md *table.l + 6
+
+In this case the '*' causes BD32 to retrieve the value of the symbol
+'table'.  This value is used as the address for a memory reference.  The value
+stored in that memory location will be retrieved using a long word memory read
+and added with the value 6. The result is the address from which the
+memory dump command will start displaying the contents of memory.
+
+The '.b' following the symbol specifies that a byte access should be
+performed on the address defined by the symbol 'table'.  Other size specifiers
+which may be used are '.w' and '.l', specifying word or long accesses.  If no
+specifier is used then the default size is word.
+
+Numeric Constants
+=================
+
+In BD32 numeric constants may be one of three forms:
+
+0x1234          hexadecimal
+$1234           hexadecimal
+1234            decimal
+BD32 Commands
+=============
+
+Following is a brief description of each of the commands available in BD32.
+Each command which needs a numeric parameter, for example an address, will
+typically proceed from the address specified the last time the command was
+used;  for example, if the command "md $100 $17f" was typed, typing "md" later
+would display memory starting at address $180.
+
+Some commands such as "md" allow an option to be entered.  This option may
+take one of four forms:
+
+;b              specifies operation on byte data (8 bits)
+;w                  "         "     "  word  "   (16 bits)
+;w                  "         "     "  long  "   (32 bits)
+;di                 "         "     using code assembly/disassembly
+
+For example, if "md $100 ;b" was entered, the memory would be displayed as
+byte values.  If "md $100 ;di" was entered,  a disassembly is done starting
+at address $100.  If no option is entered, then ";w" (16 bit data) is assumed.
+
+Almost all commands will work whether the CPU32 is running or stopped.  If
+the CPU32 is running when a command is typed by the user, if that command
+needs to access memory or CPU registers then BD32 will stop the processor
+momentarily while it retrieves the necessary information, then restart it
+again after BD32 has what it needs.
+
+A summary of the commands available may be shown on the screen while
+debugging, by typing the command 'help'.
+
+Note that when target memory is accessed by BD32, the default Function Code
+used to perform these accesses is 5 (supervisor data space).  This may be
+changed by the user (see 'FC' command below).
+
+BD32 contains a facility allowing the user to extend the command set of BD32.
+If the user enters a command which does not match the name of a built-in BD32
+command, then BD32 will search the current DOS directory, and the directory from
+which BD32 was executed (DOS version 3.0 and newer only), looking for a disk
+file with the same name as the command but with a filename extension of '.d32'.
+This file should contain a CPU32 assembly language program, stored in the
+Motorola standard S-record format.  If such a file is found, its contents are
+downloaded to the target MCU and the program is executed.  If the file is not
+found, BD32 reports 'undefined command' to the user.
+
+Programs which are downloaded and executed in this manner are called
+'Target-Resident Command Drivers', and they have access to all resources
+available on the host PC, such as the display and keyboard, disk files,
+etc.  This facility may be used to create new BD32 commands which
+perform target-dependant tasks, such as on-chip EEPROM programming,
+self-test, etc.  For more information on these command drivers, see
+the section entitled 'Using Target-Resident Command Drivers with BD32'.
+
+Memory Display/Modify Commands
+==============================
+
+BF <start> <end> <data> [;<option>]
+
+Fills memory with the value specified by <data>, starting at address <start>
+and ending with address <end>.  The optional ;b, ;w, or ;l size specifier is
+used to determine the size of the data write.
+
+MD [<address>] [<count>] [;<option>]
+
+Display the contents of memory starting at <address1>, continuing for <count>
+bytes.  If <count> is not specified, it is assumed to be $100.  If <address>
+is not specified, the starting address will be the location after the last
+byte displayed by a previous "md".
+
+MM [<address>] [;<option>]
+
+Examine and optionally change the contents of memory starting with <address>.
+<Option> specifies the size of data upon which to operate.  This allows
+coherent update of word or long word I/O registers in the Microcontroller.  If
+';di' is specified then the single-line assembler will be invoked (see ASM
+command).
+
+The data at the specified address is presented, along with its ASCII
+character if the data represents a printable ASCII character.  The user may
+enter a new value, in which case that value will be written to memory.  The
+user may also optionally enter a character after the new value, which may be
+one of the following:
+
+Character       Action
+=========       ======
+no character    repeat the action of the previously-entered character
+                (defaults to 'v')
+'='             write the new value but do not increment the address displayed
+'^'             write the new value, then decrement the address displayed.
+'v' or 'V'      write the new value, then increment the address displayed.
+'.'             quit memory modify and return to the BD32 prompt.
+
+LO <filename> [<offset>]
+
+The load command loads an object code file from disk into the target processor's
+memory.  The format used must be Motorola S-records;  This format is produced
+by most cross assemblers, including Motorola's Freeware assembler AS32.  All
+valid types of S-record are supported - S1, S2, and S3.
+
+If no filename is entered on the command line, the user will be prompted for
+one.  If for some reason the file cannot be opened, the message "Cannot open
+file <filename>"will be displayed.  At the end of the load, a message is
+displayed showing the number of S-records loaded from the file into
+memory.
+
+The optional offset parameter, if provided, will be added to the load
+addresses found in the s-record file.  This allows the code to be loaded
+into a different address than was specified at assembly time.
+Line-by-Line Assembler/Disassembler
+===================================
+
+ASM [<address>]
+
+This command disassembles the code at location <address>, then prompts
+for new code to be assembled and placed in memory.  After each new
+instruction is entered, it is assembled into memory and the next
+location is displayed.  To return to the BD32 prompt, enter a period
+('.') instead of assembly code.
+
+Since this assembler is intended for code patches, the assembler will
+not optimize the code entered in any way;  for example, the line "move
+#2,d0", which would be optimized to "moveq #2,d0" by most common 68000
+assemblers, will not be changed.  Similiarly, when disassembled the code
+will be displayed exactly as it exists in memory.  For example, if an
+indexed addressing mode is used with some registers suppressed, all
+suppressed registers will be displayed, along with scaling factors if
+present in the code.
+
+There are some minor restrictions on the syntax which is recognized.
+Appendix A lists all limitations on assembly language input.
+
+DASM [<address> [count]]
+
+DASM performs a code disassembly starting at the specified location.  It
+disassembles <count> instructions each time it is invoked.  The address is
+optional in which case the instruction following the last disassembled will be
+used.  The count is also optional; the default is to use the count last
+specified.
+Register Display/Modify
+=======================
+
+RD
+
+RD performs a display of the contents of all the CPU registers in the CPU32,
+followed by a disassembly of the instruction pointed to by the program
+counter.
+
+RM [<registername>]
+
+RM allows the user to modify the contents if the CPU registers.  A register
+name may be specified, in which case the command presents that register first.
+If no register is specified then D0 is presented first.
+
+Editing the register contents is similiar to the MM memory modify command
+explained above.  The register name is displayed, followed by its contents.
+If the user wishes to change the contents, he may enter a new value to be
+stored in that register, followed by pressing the 'enter' key.  He may also
+optionally enter one of the following characters as follows:
+
+Character       Action
+=========       ======
+no character    repeat the action of the previously-entered character
+                (defaults to 'v')
+'='             write the new value but do not increment to the next register.
+'^'             write the new value, then decrement to the previous register.
+'v' or 'V'      write the new value, then increment to the next register.
+'.'             quit register modify and return to the BD32 prompt.
+Breakpoints
+===========
+
+Breakpoints are used to stop the processor when a certain set of
+user-specified conditions exist, in order to examine the state of the
+CPU, memory, I/O, etc.  Breakpoints are implemented in two distinct
+ways, depending on whether the BCCDI (Development Interface) card is
+used, or whether the parallel adapter circuit is used.
+
+Breakpoints on the BCCDI
+========================
+
+When plugged into the Busines Card Computer, either directly, or through
+the Platform Board, the DI card has access to the address and control
+busses of the target microcontroller.  This allows the DI card to monitor
+the operation of the target microcontroller and generate breakpoints on
+many types of CPU cycle - for example, supervisor or user memory accesses,
+interrupt acknowledge cycles, even when some chip selects or port pins are
+asserted (those signals that are alternate functions on the monitored
+pins).  For this reason, a breakpoint gate array was included on the DI
+card to provide HARDWARE breakpoints.
+
+The breakpoint gate array is essentially a quad 32 bit maskable
+comparitor, where each bit on each comparitor may be selected to match
+on a '1' state, a '0' state, or 'X' (don't care, always valid).  There
+are four compare value registers and four mask registers.  The compare
+value registers define the value of the associated signal that the
+comparitor must see in order to generate a 'match' output to stop the
+taeget CPU.  The mask registers define which bits of the value registers
+should be compared and which should be ignored (IE. which are 'X' or
+don't care bits).  Any bit in the mask register which contains a '1'
+defines the corresponding bit in the compare register as being valid.
+The breakpoint commands in BD32 allow the user to set up these
+registers to halt the target MCU under the selected conditions.
+
+Breakpoints when using the Parallel Adapter Circuit or the ICD Card
+===================================================================
+
+The parallel adapter circuit and the Motorola ICD card have access
+to only a limited number of signals on the target MCU, which do not include
+the address and control signals.  This means that hardware breakpoints, as
+described in the previous paragraph, are not available.  When using the
+parallel adapter circuit or ICD interface, BD32 uses a 'software' breakpoint
+scheme similiar to that used on the 8-bit EVM modules such as the 68HC05
+and 68HC11.
+
+In the software breakpoint scheme,  breakpoints may only be set in
+program memory.  The user instruction at the selected breakpoint
+location is saved in the PC and a special breakpoint opcode (BGND,
+value $4AFA) is inserted in its place.  When the user program is
+executing and the BGND opcode is encountered, the CPU stops executing
+code and enters the background debug mode.
+BR [<address> [<mask>]]
+
+A breakpoint is set at the specified address.  Only four breakpoints
+may be active at any one time, and if all four are already set the message
+"Breakpoint limit reached" will be displayed. If no address or mask is
+specified, then the BR command simply displays all currently active
+breakpoints.
+
+The mask specifies which bit of the address are valid.  The format of the
+address and mask bits is shown below:
+
+Bit     31      30      29      28      27      26      25      24
+Signal  DS      AS      SIZ1    SIZ0    R/W     FC2     FC1     FC0
+
+The least significant three bytes contain the 24 bit breakpoint address. If a
+mask bit is high, the corresponding address or control signal is enabled
+for comparision.  If a mask is not specified, then a default mask of hex
+8007FFFF is used.
+
+When the parallel adapter circuit or ICD card are used, the mask is accepted
+and saved, but has no effect, since the breakpoint gate array is not
+available as outlined in the breakpoint description.
+
+After the breakpoint is successfully set, all currently active breakpoints
+will be displayed.
+
+NOBR [<address1> [<address2> [<address3> [address4>]]]]
+
+NOBR removes breakpoints which were set at the specified address.  If no
+addresses are specified, then the question "Kill all breakpoints (Y/N)? "
+will appear.  If the user types "Y" or "Yes", then all breakpoints will be
+cleared.
+
+If one or more addresses are specified, then breakpoints set at those
+addresses will be cleared.  If an address is given for which no breakpoint
+is set, the message "Can't clear breakpoint: <address>" will be displayed.
+
+The command finishes by displaying any breakpoints which are set after the
+NOBR command has been executed.
+Processor Control
+=================
+
+GO [<address>]
+
+The processor starts execution at the specified address.  If no address was
+given, the processor resumes at the current address in the program counter.
+If the processor is already running, a warning message is displayed and the
+processor state is not altered.
+
+RESET
+
+The processor is restarted as if a power-up reset had occurred.
+
+RESTART
+
+A hardware reset is applied to the MCU.  After reset is released, the MCU
+stops before executing the first instruction cycle after reset.  From this
+point the MCU can be single-stepped from startup using the 'T' (trace) command,
+or run at full speed using the 'GO' command.
+
+STOP
+
+The processor is stopped from executing code at the end of the current
+instruction.
+
+T [<conditional expression>]
+S [<conditional expression>]
+
+The trace instruction causes the processor to execute one instruction and
+then stop; if the command is a branch or jump into a subroutine,
+execution will stop at the first instruction of the subroutine.  A register dump
+is performed after the instruction is executed.
+
+The step command ('S') single-steps the processor one instruction, but
+subroutine calls are executed at full speed, stopping the target
+processor at the instruction after the call.  This is handy for cases where
+subroutines have already been tested.
+
+If the optional conditional expression is entered, then the trace and
+step commands will execute continuously until the expression evaluates to a
+non-zero result.  For example, the command
+
+T PC==$4004
+
+will cause BD32 to trace until the program counter value equals the hex
+value $4004.  Similiarly,
+
+S *LoopCounter < 23
+
+will step until the variable at address 'LoopCounter' is less than 23.
+The user may halt the trace/step action by pressing the 'ESC' key.
+
+When the 'S' (step) command encounters a subroutine call or trap
+instruction, a breakpoint is placed at the instruction after the call or
+trap.  The target is then run at full speed, and the return from the
+call/trap will cause it to hit to breakpoint and stop.  This means that
+there must be at least one free breakpoint available, and the code to be
+stepped cannot reside in ROM.
+
+Miscellaneous Commands
+======================
+
+* <comment>
+
+A line which begins with an asterisk is regarded as a comment line, and BD32
+will not process these lines.  This is useful for macro files, to add comments
+on the operation of the commands in the macro file.  (Macro files are executed
+using the 'DO' command - see the description of this command for more
+information).
+
+CLS
+
+CLS clears the screen and positions the cursor at the top line on the
+display.
+
+CLOAD <command> [<parameters> ...]
+
+This command loads a target-resident command driver and sets up the
+user-specified parameters as text strings in memory, but does not
+execute the command.  This is provided mainly to assist in debugging
+Target-Resident Command Drivers (see the section later in this document
+entitled 'Using Target-Resident Command Drivers with BD32') and would not
+normally be used to debug application programs.  Use the 'LO' command to
+load application programs for debugging.
+
+After the command driver is loaded, the execution address is written
+into the Program Counter (PC) register of the target MCU, and a message
+is displayed on the screen showing the driver load address and the
+execution address.
+
+DO <filename>
+
+The file specified is opened, and text is read and executed as if it was
+being typed at the keyboard by the user.  This allows the user to create
+command files using a standard text editor.  Any legal BD32 command may
+contained in this text file, including DO.  Recursive DO commands are
+not supported; if a command file contains a 'DO' command, the file
+containing the 'DO' command will be closed, and execution will continue
+with the newly specified command file.
+
+If an error occurs during execution of a 'do' file, BD32 will ask the user if
+he wishes to continue.  The user has the option of continuing execution of the
+'do' file by pressing 'Y' (yes), or aborting execution by pressing 'N' (no).
+Most types of errors will cause this query to appear; for example, using an
+undefined symbol in an expression, commandline parameter out of range, etc.
+
+DOS [<commandline>]
+
+This command causes BD32 to be suspended temporarily and escape to the
+PC-DOS operating system.
+
+If <commandline> was not entered after the 'DOS' command, then BD32 suspends
+to the PC-DOS commmand interpreter COMMAND.COM.  In this way the user can
+execute PC-DOS commands and then return to BD32 by entering the PC-DOS 'exit'
+command.
+
+If <commandline> is entered following the 'DOS' command, it will be passed to
+DOS to be executed.  After that command line is executed by PC-DOS, control
+returns immediately to BD32.
+
+DRIVER [<expression>]
+
+The DRIVER command specifies the load address for Target-Resident Command
+Drivers.  (See the section entitled 'Using Target-Resident Command Drivers
+with BD32' later in this document, for a description of Target-Resident
+Command Drivers).
+
+If the DRIVER command is entered without any parameters, the current
+setting of the driver load address is displayed (the default is $0
+when BD32 is started).  The load address may be changed by entering an
+address expression as a parameter to the DRIVER command.
+
+EVAL <expression>
+
+The eval command evaluates the expression on the command line and prints the
+hex, decimal, and binary value of the result.  Any legal expression may
+be entered. If an error is found in the expression the user will be
+notified with an error message.
+
+EXIT
+ or
+QUIT
+
+These commands terminate BD32 and return to the DOS operating system.  The
+target system is not affected by the command, and is left in whatever
+state existed before the command was entered.
+
+FC [<function code>]
+
+The FC command allows the user to specify which function code should be used
+by BD32 when it accesses memory in the target system.  The default function
+code is 5 (supervisor data space).
+
+To enter a new value, type the FC command with a numeric parameter in the
+range 0 through 7.  To see what function code value is currently in use, type
+the FC command without a parameter.
+
+The function codes and their numeric values may be found in the CPU32 reference
+manual, CPU32RM/AD, available from Motorola.
+
+LOG [<filename> | OFF]
+
+The LOG command provides a way to keep a record of debug activity in a disk
+file for later reference.  When 'LOG <filename>' is entered, BD32 creates a
+file of that name on disk, and all subsequent user commands and program output
+from BD32 to the user will be copied to that disk file.  In the second form,
+'LOG OFF' closes the disk file and disables logging to disk until the next
+'LOG <filename>' command is entered.  The third, form, 'LOG' without any
+parameter, informs the user whether or not logging is in effect.
+
+PORT [<port> <speed>]
+
+If the PORT command is entered without any parameters, BD32 displays the
+current device name (LPT1, LPT2, COM1, or COM2), and the current
+delay/speed setting for the port.
+
+If a new port was specified, BD32 switches to that I/O port on the host
+computer.  <port> must be one of COM1, COM2, LPT1, or LPT2.  If a COM
+port is specified, BD32 assumes that a Motorola BCCDI card is attached
+to that serial port;  The DI card must be running software version 1.00
+through 1.13 in order for BD32 to work.  (If your DI card has a
+68HC811E2 microcontroller on it, it will work; the DI card with the
+68HC711E9 is not supported by BD32).  The <speed> parameter is interpreted
+as the baud rate for the specified serial port.
+
+If a parallel (LPT) port is specified,  BD32 assumes that the BDM
+interface circuit, whose schematic is included with BD32 in the file
+BDM-IF.SCH/BDM-IF.PRN, is attached to the specified parallel port.
+The <speed> parameter represents a delay count to be used when clocking
+data to the target MCU.
+
+After setting the port number, the PORT command displays the port in use
+and the speed.
+
+SD [<start> [<end>]]
+
+SD displays the name and value of symbols stored in BD32's symbol table.  If
+no <start> or <end> values are entered, then the entire contents (all symbols)
+are displayed.  The symbols are displayed in increasing alphabetical order.
+
+The user may optionally limit the range of symbol names displayed by entering
+the <start> and <end> symbol names.  These parameters do not have to exactly
+match symbols which are in the table; BD32 will take the closest match which
+does exist in the symbol table, and use that for its starting or ending symbol
+for the display.
+
+The user may halt a lengthly symbol display by pressing the Escape key (ESC).
+
+SET <symbolname> <expression>
+
+The specified symbol is entered into BD32's symbol table, and given the value
+obtained by evaluating the numeric expression.  If the symbol already existed,
+its value is changed to that specified by the expression.  BD32 is currently
+set to allow room for about 300 symbols.  Symbols may be up to 31 characters
+long, and all characters are significant.  The value stored for each symbol
+is a 32 bit integer quantity.
+
+SYSCALL [ON | OFF]
+
+SYSCALL enables and disables BD32 system call processing when an
+instruction is traced.  This command is designed to be an aid to
+debugging Target-Resident Command Drivers, and would not be used during
+the development of normal applications programs.  See the section below
+entitled 'Using Target-Resident Command Drivers with BD32' for an
+explanation of what these drivers are and how they are used.
+
+If SYSCALL is entered without any parameters, the current setting for
+system call processing is displayed.  If the parameter 'ON' is entered,
+system call processing is enabled; if the parameter 'OFF' is entered,
+then it will be disabled.  Any other parameter produces an error message.
+
+WINDOW [ON | OFF]
+
+The WINDOW command allows the user to select between a windowed user
+interface and a simpler 'glass teletype' style of interface.
+
+When BD32 starts up, it presents a 'windowed' interface which displays the
+target CPU registers in one window at the top of the screen, a code
+disassembly window in the middle of the screen, and a small command line 
+window at the bottom.  This is fine for most debugging work, however some
+commands are easier to use if they are displayed in a larger command line
+window.  The 'WINDOW OFF' command will remove the register and disassembly
+windows, leaving the entire screen (except for the status line at the bottom
+of the screen) for the command line display.
+
+If the user desires to return to the windowed interface, the command 'WINDOW
+ON' will restore it to the screen.
+
+Using Target-Resident Command Drivers with BD32
+===============================================
+
+In order to allow the user to easily extend the command set of BD32,
+particularly to facilitate EPROM/EEPROM programming, erasing, verifying, etc.
+on 68300 family microcontrollers, a method was implemented in BD32 to allow the
+creation of user-defined commands.  This is available in version 1.2 and later
+of BD32.
+
+If the user enters a command which does not match the name of a built-in BD32
+command, then BD32 will search the current DOS directory, and the directory from
+which BD32 was executed (DOS version 3.0 and newer only), looking for a disk
+file with the same name as the command but with a filename extension of '.d32'.
+For example, if the user entered the command:
+
+show main
+
+BD32 would search for a disk file called 'show.d32'.  This file should contain
+a CPU32 assembly language program, stored in the Motorola standard S-record
+format.  If such a file is found, its contents are downloaded to the target
+MCU and the program is executed.  If the file is not found, BD32 reports
+'undefined command' to the user.
+
+Programs which are downloaded and executed in this manner are called
+'Target-Resident Command Drivers', and they have access to all resources
+available on the host PC, such as the display and keyboard, disk files, etc.
+When they are downloaded and executed, BD32 monitors their execution instead of
+returning control to the user.  When the driver enters background mode, by
+executing the BGND instruction, it must pass a function code to BD32 in CPU
+register D0.  BD32 will read that register when the target MCU halts, and along
+with parameters in the other CPU registers will perform one of a set of
+functions as specified by the function code.  When BD32 has finished
+executing the system call, it will write the results back into the CPU
+registers of the target MCU, and restart execution of the target-resident
+driver.
+
+There are several functions available, as documented later in this appendix;
+they form an interface between the driver program running on the target MCU, and
+the resources of the host PC.  Essentially, BD32 functions as a slave to the
+target MCU, performing the requested function, returning the results to the
+target, and restarting its execution.  This will continue until the target MCU
+halts with the QUIT (value 0) function code in register D0, at which point
+BD32 leaves the target MCU halted and goes back to its normal mode of operation,
+accepting and processing commands from the user.  If for some reason the
+user wishes to abort execution of the target-resident driver, pressing
+the <esc> key will halt the target system and return control of BD32 to
+the user.
+
+Driver Format
+=============
+
+Target-Resident Command Drivers are written as position-independant
+programs; their load address is determined dynamically by BD32, based on
+a user-input load address (see DRIVER command description).  When
+creating command drivers, care must be taken to ensure that all
+references to data and code in the driver are position-independant.  The
+driver cannot be guaranteed that it will load at any arbitrary address;
+the only guarantee is that the load address will be a word-aligned (ie,
+even) address.
+
+Command drivers are stored on disk using the standard Motorola
+S-Record hex-ASCII format.  The S-Records should start at address 0;
+BD32 will relocate them as they are loaded, by adding the load offset
+specified in the DRIVER command, plus an offset calculated to allow
+enough room for the command line parameters entered by the user.  The
+first four bytes in the driver must be a long-word (4 byte) offset to
+the execution address; this is address at which BD32 will start
+execution of the driver when the it is first loaded.
+
+When the driver is loaded, the command line parameters entered by the
+user are set up in memory.  The structure used consists of an array
+of long pointers, each one pointing to a text string terminated with a
+zero byte.  This gives the program access to the command line parameters
+entered by the user.  This is identical to the 'main (int argc, char
+**argv)' structure used by C programs.  The parameters are the actual
+character strings typed by the user; they have been separated into individual
+zero-terminated strings, but they must be parsed by the driver if numerical
+information is required.
+
+When the driver is executed, CPU register D0 contains the count (argc) of
+command line parameters stored in memory, and CPU register A0 contains the
+address (argv) of the array of text pointers.  Additionally, Address
+register A5 will point to the first memory location occupied by the driver;
+this will be useful in making references to memory variables, since the
+68000 family processors do not allow memory writes using the PC-relative
+addressing mode.
+
+Suppose the user typed the following command:
+
+TEST 34 code.s19
+
+Data register D0 would contain the value 3, and address register A0
+would point to an array containing three longword (4-byte) pointers.
+The first element of the array would point to the text string 'TEST',
+the second would point to the text string '34', and the third would
+point to the text string 'code.s19'.
+
+Up to nine parameters are allowed for a command.  The maximum value for
+argc will be 10 (nine parameters plus one for the command's name).
+
+The driver is executed with the value $2700 in the CPU's status register
+(supervisor priviledge level, level 7 interrupt mask).  The driver routine may
+make any of the BD32 system calls defined below to communicate with the host
+computer.  The driver completes execution by making a QUIT system call
+(register D0 contains 0).
+
+An example of a driver program is shown below.  This driver simply echoes its
+command line parameters to the screen.
+
+===============================================================================
+                        * test driver for BD32 programming command
+                        * Scott Howard February 1992
+                        * Format: TEST <parameter 1> [<parameter 2> ...]
+                        * simply echoes the command line parameters back to the user
+                        * source file name: test.s
+                        * object file name: test.d32
+                        * object file format: Motorola S-record hex
+                        
+                                        opt     l
+00000000 0000 0030                      dc.l    TEST            execution address
+00000004 5445 5354 2050 signon  dc.b    'TEST PROGRAM for BD32 programming drivers'
+         524f 4752 414d
+         2066 6f72 2042
+         4433 3220 7072
+         6f67 7261 6d6d
+         696e 6720 6472
+         6976 6572 73
+0000002d 0d0a 00        CRLF            dc.b    13,10,0         <cr>, <lf>, null
+                                        even
+                        
+                        * following is the mainline routine for the driver
+                        
+00000030 2248           TEST            move.l  a0,a1           get argv in a1
+00000032 2400                           move.l  d0,d2           get argc
+00000034 41fa ffce                      lea.l   signon(PC),a0   print signon string
+00000038 7001                           moveq.l #BD_PUTS,d0     use 'putstring' function in BD32
+0000003a 4afa           		bgnd
+0000003c 0c82 0000 0002                 cmpi.l  #2,d2           arg count < 2?
+00000042 6400 0008                      bcc     test_1
+00000046 7201                           moveq.l #1,d1           bail out - error code 1
+00000048 6000 001c                      bra     test_error
+0000004c 7001           test_1          moveq.l #BD_PUTS,d0     puts () system call
+0000004e 2059                           movea.l (a1)+,a0        point to next string
+00000050 4afa           		bgnd
+00000052 7220                           moveq.l #' ',d1         print space between each one
+00000054 7002                           moveq.l #BD_PUTCHAR,d0
+00000056 4afa           		bgnd
+00000058 5342                           subq    #1,d2
+0000005a 66f0                           bne     test_1          loop till done
+0000005c 41fa ffcf      		lea.l	CRLF(PC),a0	point to <cr> <lf> string
+00000060 7001                           moveq.l #BD_PUTS,d0     display it on user screen
+00000062 4afa           		bgnd
+00000064 4281                           clr.l   d1              indicate 'no error' to BD32
+00000066 7000           test_error      moveq.l #BD_QUIT,d0     all done - quit
+00000068 4afa           		bgnd
+                        
+                                        END     TEST
+
+ =====     0 Error(s)
+ =====     0 Warning(s)
+===============================================================================
+BD32 System Calls for Target-Resident Command Drivers
+=====================================================
+
+In order to access resources on the host PC, a set of system calls is provided.
+System calls are accessed by loading a code into register D0, signifying which
+system call is desired, and then executing the BGND (enter background mode)
+instruction.  When the system call has been executed by BD32, the target MCU is
+restarted and register D0 will contain a result code, indicating the success or
+failure of the system call.
+
+This command set allows the target microcontroller to take complete control of
+the host PC; it can create, open, read, write, and close disk files, and it can
+read input from the user via the keyboard and display messages on the screen.
+This allows the creation of fairly sophisticated programs for applications such
+as production testing and configuration, production statistics, etc, while still
+maintaining the consistent interface via BD32.  The ability to write command
+files for BD32 assists in allowing the programmer to more or less completely
+automate operations in BD32.
+
+Following is a description of the system calls available.
+
+Name    Function                        
+========================================
+
+QUIT    stop driver execution
+PUTS    display character string on screen
+PUTCHAR	display single character on screen   2	D1 - character
+GETS    get string from user (CR ends)       3  A0 - address of buffer
+GETCHAR get single character from user       4  char returned in D0
+GETSTAT returns char ready/not ready status  5  D0 non-zero if ready
+FOPEN   open disk file on host PC            6  A0 - filename string
+                                                A1 - pointer to mode
+                                                (same format as fopen)
+FCLOSE  close disk file                      7  D1 - file handle
+FREAD   read n bytes from disk file          8  D1 - file handle
+                                                D2 - byte count
+                                                A0 - buffer address
+FWRITE  read n bytes from disk file          9  D1 - file handle
+                                                D2 - byte count
+                                                A0 - buffer address
+FTELL   return current file pointer pos.     10 D1 - file handle
+FSEEK   seek to position n in disk file      11 D1 - file handle
+                                                D2 - offset
+                                                D3 - origin
+FGETS   read \n-terminated string from file  12 D1 - file handle
+                                                A0 - buffer
+FPUTS   write null terminated string to file 13 D1 - file handle
+                                                A0 - buffer
+EVAL    evaluate expression from string      14 A0 - string
+                                                D1 - return value
+FREADSREC read S-record from disk file       15 D1 - file handle
+                                                A0 - buffer address
+
+Register D0 must contain the function code 'fcode' upon entry, and will contain
+a status word when control returns to the driver program.  D0 is zero if the
+operation succeeds and will be non-zero if an error occurred during the
+function call.  For function 5 (GETSTAT), the result is zero if no character
+is ready.  If a character is ready D0 will contain the ASCII code for the
+character; function 3 or 4 must still be called to clear the character from
+the input buffer.
+
+If register D0 contains an illegal function code value, that is greater
+than 15, BD32 will display all CPU registers using the same format as
+the 'RD' command.  It will then keep the target stopped, and will
+present a prompt to the user asking him whether or not he wishes to
+continue execution.  If the user presses the <escape> key, the target
+driver will be aborted and BD32 returns control to the user.  Any other
+key will cause BD32 to resume execution of the driver.
+
+This feature was implemented mainly to simplify debugging of resident
+command drivers, since normal BD32 debug facilities are not available
+when executing target-resident commands.  By purposely inserting BGND
+instructions at various locations in the program, the programmer can
+look at the status of the target MCU, analyze the execution of the
+command driver being debugged, and decide on the spot whether or not
+to continue execution.
+
+Disk file functions are similiar to the buffered file functions in the
+standard C library (eg. fopen, fread, fwrite, ftell, fseek, fclose).  A file
+handle is returned in D0 by the fopen call;  this handle will always be
+non-zero unless an error occurred.  This handle must be passed as the 'handle'
+parameter for subsequent operations on that file.
+
+SYSTEM CALL DESCRIPTION
+=======================
+
+QUIT
+====
+stop driver execution
+fcode in reg. D0:	0
+Parameters:		D1:	return code of target-resident program
+Return value:		None
+
+Function:
+This system call halts execution of the driver and returns control of BD32
+to the user.  The value in register D1 is considered as an error code 
+representing the success or failure of the target-resident program:  if it
+is zero, no error is assumed to have occurred, but if it is non-zero then the
+error code is displayed on the screen.
+
+PUTS
+====
+display character string on screen
+fcode in reg. D0:	1
+Parameters:		A0: address of string
+Return value:		D0: error code (non-zero indicates error)
+
+Function:
+This function writes the character string addressed by register A0 onto the
+command line window of BD32's display.  This function returns 0 in register
+D0 if the write was successful, or a non-zero value if not.  In the current
+implementation of BD32, this function always returns 0.
+
+PUTCHAR
+=======
+display character string on screen
+fcode in reg. D0:	2
+Parameters:		D1: character to be displayed
+Return value:		D0: error code (non-zero indicates error)
+
+Function:
+This function writes the ASCII character in register D1 onto the command
+line window of BD32's display.  This function returns 0 in register D0 if
+the write was successful, or a non-zero value if not.  In the current
+implementation of BD32, this function always returns 0.
+
+GETS
+====
+get string from user (CR ends)
+fcode in reg. D0:	3
+Parameters:		A0 - address of buffer
+Return value:		D0: error code (non-zero indicates error)
+
+Function:
+Each character entered on the host PC's keyboard is copied into the memory
+buffer addressed by A0.  When the user presses the <return> key, an ASCII
+null byte (value = 0) is placed in the location after the last valid ASCII
+keypress, and the target-resident program resumes execution.
+
+This function returns 0 in register D0 if the read was successful, or a
+non-zero value if not.  In the current implementation of BD32, this
+function always returns 0.
+
+GETCHAR
+=======
+get single character from user
+fcode in reg. D0:	4
+Parameters:		A0 - address of buffer
+Return value:		D0: character entered by user
+
+Function:
+
+This function stops execution of the driver and gets a character from the
+PC's keyboard.  It will not return until the user presses a key.  The ASCII
+code of the character will be placed in register D0.
+
+GETSTAT
+=======
+returns char ready/not ready status
+fcode in reg. D0:	5
+Parameters:		D0 non-zero if ready
+Return value:		D0: character entered by user
+
+Function:
+
+This function checks the PC's keyboard to see if the user has pressed a
+key, but unlike GETCHAR it will return immediately whether or not the
+user has pressed a key.  The ASCII code of the last character pressed
+will be stored in register D0.  If no key has been pressed, register D0
+contains 0.
+
+FOPEN
+=====
+open disk file on host PC
+fcode in reg. D0:	6
+Parameters:		A0 - filename string
+			A1 - pointer to mode (same format as 'C' fopen)
+Return value:		D0: File handle, or 0 if file could not be opened
+
+Function:
+The FOPEN function opens a disk file using the 'fopen' function call from the
+ANSI standard C library.  The parameters are the same as described for the
+ANSI function - a filename string, and a mode string.
+
+This function returns a 32-bit file handle which will be needed for
+subsequent read, write, and close function calls.  If the file could not be
+opened for any reason, this file handle will be zero.
+
+FCLOSE  close disk file                      7  D1 - file handle
+======
+close disk file
+fcode in reg. D0:	7
+Parameters:		D1 - file handle (from previous 'fopen' call)
+Return value:		D0 - non-zero if error occurred
+
+Function:
+This system call closes a disk file previously opened using the FOPEN system
+call.  The return status in D0 is non-zero if the file could not be closed
+properly.
+
+FREAD
+=====
+read n bytes from disk file
+fcode in reg. D0:	8
+Parameters:		D1 - file handle (from previous 'fopen' call)
+			D2 - byte count
+			A0 - buffer address
+Return value:		D0 - count of bytes read from disk file
+
+Function:
+This system call reads data from a disk file into a buffer addressed by
+register A0.  The file must have been previously opened using the FOPEN
+system call.The number of bytes is indicated by the value in register D2.
+
+When this system call returns, register D0 contains the number of bytes 
+actually read from the file.  This value will be less than the count passed in
+D2 if a problem occurred (such as reaching the end of file).
+
+FWRITE
+======
+read n bytes from disk file
+fcode in reg. D0:	9
+Parameters:		D1 - file handle (from previous 'fopen' call)
+			D2 - byte count
+			A0 - buffer address
+Return value:		D0 - count of bytes written to disk file
+
+Function:
+This system call writes data from target memory to a disk file on the PC.  The
+file must have been previously opened using the FOPEN system call.  The number
+of bytes is indicated by the value in register D2.
+
+When this system call returns, register D0 contains the number of bytes 
+actually read from the file.  This value will be less than the count passed in
+D2 if a problem occurred (such as reaching the end of file).
+
+FTELL
+=====
+return current file pointer position
+fcode in reg. D0:	10
+Parameters:		D1 - file handle (from previous 'fopen' call)
+Return value:		D0 - current position in disk file
+
+Function:
+This system call returns the current position of the file pointer.  The
+file must have been previously opened using the FOPEN system call.
+
+FSEEK
+=====
+seek to position n in disk file
+fcode in reg. D0:	11
+Parameters:		D1 - file handle (from previous 'fopen' call)
+			D2 - offset
+			D3 - origin
+Return value:		D0 - non-zero if error occurred
+
+Function:
+FSEEK moves the file pointer of a disk file to the position specified in 
+register D2, relative to an origin specified in register D3 as follows:
+
+D3 = 0		relative to file start
+D3 = 1		relative to current position in file
+D3 = 2		relative to file end
+
+The file must have been previously opened using the FOPEN system call.
+
+The return value in D0 is zero if the seek operation succeeded, or non-zero
+if the seek operation failed.
+
+FGETS
+=====
+read newline-terminated string from file
+fcode in reg. D0:	12
+Parameters:		D1 - file handle (from previous 'fopen' call)
+			A0 - buffer
+Return value:		D0 - address of buffer if OK, or zero if error
+
+Function:
+This system call reads an ASCII string from the disk file identified by the
+file handle in D1.  The file must have been previously opened using the
+FOPEN system call.
+
+FPUTS
+=====
+write null terminated string to file
+fcode in reg. D0:	13
+Parameters:		D1 - file handle (from previous 'fopen' call)
+			A0 - buffer
+Return value:		D0 - non-negative value if OK, or $ffffffff if error
+
+Function:
+This system call writes a null-terminated ASCII string from the MCU's memory
+to a disk file on the host PC.  The file must have been previously opened
+using the FOPEN system call.
+
+EVAL
+====
+evaluate expression from string
+fcode in reg. D0:	14
+Parameters:		A0 - string
+Return value:		D0 - non-zero if error occurred
+			D1 - result of evaluation
+
+Function:
+
+EVAL performs a mathematical evaluation of the expression in the string
+addressed by register A0.  The string must be terminated by an ASCII 
+null (hex $0).  EVAL returns the calculated value in D1, and a 
+status value in D0.  The status value is a bit mask, where a bit set to '1'
+indicates a certain error, as follows:
+
+Bit 1   Invalid operator (eg. ++)
+Bit 2   Undefined symbol name
+Bit 4   Illegal character in string
+Bit 8   String terminated prematurely
+
+FREADSREC
+=========
+read S-record from disk file
+fcode in reg. D0:	15
+Parameters:		D1 - file handle
+			A0 - buffer address
+Return value:		D0 - error code, non-zero if error occurred
+
+Function:
+FREADSREC reads one S-record from the file associated with the
+file handle.  The S-record is converted to binary, scanned for checksum
+verification, and then loaded into the buffer pointed to by address register
+A0 (NOT to the address contained in the S-record).  The data in the buffer
+will be formatted as follows:
+
+Byte 0          S-record type (0,1,2,3,7,8, or 9)
+Byte 1          record length - number of bytes to follow (including address)
+Bytes 2-5       address field, always 4 bytes long
+Bytes 6-?       code
+
+The return value in D0 will be one of the following values:
+
+0       S-record was read OK.
+1       End of File reached before S9 record encountered
+2       the S-record just read was an S9 record (last record of file)
+	address field contains the execution address from the S9 record
+3       Checksum error detected in the current S-record
+4       illegal S-record - file is probably not an S-record file
+
+Driver Messages
+===============
+
+In order to help simplify and reduce the size of Target Resident
+Drivers, BD32 implements a feature which allows error messages, and a
+one-line 'help' description of the command, to be stored in a disk file
+separate from the driver code itself.  This file must have the same name
+as the command, but with a filename extension of ".msg".  For example, if
+a programming driver was stored in a disk file "prog.d32", its message file
+would be named "prog.msg".
+
+The first line of text in the message file is the 'help' text displayed
+for the command when the BD32 'help' command is invoked.  Successive lines
+of text in the message file are error messages, to be displayed when
+the driver finishes execution.  The particular message to be displayed is
+determined by the status code present in the target MCU's D1 register
+when the driver executes a QUIT function call to BD32.  If D1 contains
+zero, no message is displayed (the driver executed and terminated
+normally); if D1 contains 1, the second line of text in the message file
+is displayed; if D1 contains 2, the third line of text in the message file
+is displayed; and so on.  If no message file is found for a particular
+command, or if there is no text in the file corresponding to the error
+code returned by the driver, then BD32 simply displays the numeric error
+code.  Similiarly, if the BD32 'help' command finds a driver file on
+disk with no corresponding message file, it displays the name of the
+target driver with the message '{no description available}'.
+
+Below is an example of a message file for the TEST driver presented
+earlier in this section.  The only error code which this driver can return
+is 1 (no command line parameters); so there is only one error message in
+this file.  The first text string is the help string, which is displayed
+by the BD32 'help' command.
+
+===================================test.msg===================================
+TEST <param1> [<param2> <param3>...]    Test driver - displays cmd line
+test: no parameters to display!
+==============================================================================
+
+Driver Debugging
+================
+
+Debugging a Target-Resident command can be more difficult than debugging
+normal user programs, for several reasons.  When these commands
+are executed by BD32, BD32 automatically loads the command from disk,
+preventing the programmer from patching breakpoints or diagnostics into
+the code; furthermore, BD32 monitors their execution, watching for system
+call requests, meaning that control of BD32 does not return to the user until
+the driver issues a QUIT system call.  Thus, breakpoints and
+single-stepping are not available during command execution.
+
+The BD32 'CLOAD' command was provided to load the driver and set up its
+command line parameters in the memory of the target microcontroller.
+This sets up the command in target memory as it would be for command
+execution; however BD32 does not execute the driver, but instead returns
+control to the user.  At this point, the user may debug the driver
+through use of BD32's normal breakpoints, trace command, etc.
+
+During normal debugging of user programs, BD32 does not execute a system
+call in response to the target halting execution with the BGND
+instruction.  This would normally prevent debugging of command drivers
+which used these system calls.  The BD32 command 'SYSCALL' allows the
+user to enable processing of these system calls.
+
+Each time the user enters the 'Trace' command ('T'), BD32 will
+check the instruction to be executed.  If it is a BGND (Background)
+instruction, and the user has previously enabled system call processing by
+entering 'syscall on', then BD32 will perform the system call as defined by
+the contents of the target's D0 register.  If system call processing is not
+enabled, then it will attempt to trace the instruction as normal.
+
+Note that if the processor is executing and encounters the system call
+BGND instruction, it will halt and BD32 will not process the system
+call.  In this case, the user may force execution of the system call by
+setting the program counter to the address of the BGND instruction
+(using the 'rm' command), issuing the trace command ('T'), and then the
+'go' command, to resume execution of the program.
+
+Appendix A - One line Assembler/Disassembler
+============================================
+
+Following is a more complete description of the operation of BD32's one
+line assembler/disassembler.
+
+MOVEM
+=====
+
+The register lists must be of the form 'A1/A2/A3/A4' or 'D0/D1/D2/D4/D6'
+where every register to be saved/restored must be individually
+specified.  The shorthand form, for example 'A1-A4', is not supported.
+There is no restriction on the order of the registers in the register list.
+
+Indexed Addressing Modes
+========================
+
+Indexed modes must be entered with the displacement outside of the
+parentheses.  The alternate format, with the displacement inside the
+parentheses, is not supported. For example,
+
+	TST.L	26(a0,d0.w)
+
+is would be assembled correctly, while
+
+	TST.L	(26,a0,d0.w)
+
+would result in an error message being displayed.
+
+Also, all elements of the indexed mode must be specified even if
+registers or displacements are suppressed.  The suppressed terms must be
+prefixed with a 'Z', and null displacements must be specified as 0.  For
+example, in the instruction above if we wanted to suppress all but the
+'d0.w' term, the form
+
+	TST.L	0(za0,d0.w)
+
+would be required;  simply entering
+
+	TST.L	(d0.w)
+
+would result in an error message.
+
+Default Absolute Addressing Mode
+================================
+
+If absolute addressing is used without a size being specified, then the
+size will default to long, ie. a 32-bit absolute address will be used.
+For example,
+
+	TST.L	$34	and
+	TST.L	$34.L
+
+will both result in a 32-bit address being used to specify the address
+of the operand.  To use a 16-bit address, specify .W after the address,
+as in
+
+	TST.L	$34.W
+

@@ -1,0 +1,10 @@
+set od 0x5678
+set junk 0x12345678
+set dbcclabel 0x5026
+set abs 0x7abc
+set immed 0x5
+set anyea 0x1234
+set index 0x64
+set longabs 0x13579bdf
+set bd 0x1234
+set bcclabel 0x40e2

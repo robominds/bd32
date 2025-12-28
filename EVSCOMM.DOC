@@ -1,0 +1,310 @@
+BD32 Target System Interface Routines
+=====================================
+
+Revised October, 1991 for BD32 rev 1.2
+======================================
+
+Following is a description of the routines used in BD32 to access the target
+system through the CPU32 background mode interface.  These routines are
+written in C using Borland C, with some support routines written in
+assembly language.
+
+The target interface is achieved either by direct hardware control through
+the PC's parallel printer port, or indirectly through a BCC Development
+Interface card (BCCDI) connected to one of the PC's serial ports.  The actual
+method is selected in the initialization routines; from then on all other
+routines operate in a manner independant of the particular interface method.
+
+This version of software supports only the older BCCDI cards, with software
+version 1.00 through 1.13.  These boards use a 68HC811E2.  The later rev DI
+board uses a 68HC711E9;  these boards will be supported in a subsequent
+revision of software.
+
+If the target system is executing when these routines are called, the target
+system will be stopped, the operation will be performed, and then the target
+will be restarted.  The routine stop_chip () will stop the target if several
+operations must be performed sequentially with the target system stopped.
+
+Memory Caching
+==============
+
+Some operations (eg, code disassembly) require repeated access to memory
+locations, which can be quite slow when controlling the target via the BCCDI
+card.  In order to speed these operations, a cache was implemented.  This cache
+operates as part of the memory routines GETBYTE/GETWORD/GETLONG and
+PUTBYTE/PUTWORD/PUTLONG.  In order to disable caching, call the function
+trash_cache () before each access to memory.
+
+Error Handling During Operation
+===============================
+
+When each of these routines is called, error checking is performed to ensure
+that the required operation may proceed without problems.  The type of error
+checking performed includes: no response from DI card, target power failed,
+target MCU in reset, etc.
+
+If a problem is detected, it is handled by disabling the serial or parallel
+port currently in use, printing an error message, and performing a longjmp ()
+back to the mainline code through a jmp_buf called cmd_buf.  This routine must
+be provided as part of the mainline code of the application.
+
+One other type of error can occur when controlling the BDM interface through
+the printer port; it is possible for the PC and the target system to lose
+synchronization during command and data transfers.  If this happens, the
+drivers automatically re-sync the background mode interface using 'NOP'
+commands.
+
+The error routines display error messages on the PC's screen through a routine
+called pf ().  This can be replaced by printf () in the user's code since the
+calling sequence is the same.
+
+Data Types
+==========
+Below is a list of data types used in these routines:
+
+#define LONG    unsigned long
+#define WORD    unsigned int
+#define BYTE    unsigned char
+
+=======================
+int get_commport (void)
+=======================
+
+Returns the I/O port currently used to control the target system.  Possible
+return values are -2 through +2.  A return value of 0 indicates that the I/O
+port has not been initialized; positive return values indicate that a serial
+port (COM1 or COM2) and the BCCDI card are in use, while negative return
+values indicate that a parallel port (LPT1 or LPT2) are in use.
+
+=============================
+int set_commport (port,speed)
+int port,speed;
+=============================
+
+This routine selects the port to be used to communicate with the target
+system.  The port should be -1,-2, 1, or 2.  Positive numbers specify a serial
+port (COM1 or COM2), indicating that the BCCDI card will be used to control
+the target system.  Negative numbers specify the parallel port to be used
+(LPT1 or LPT2).
+
+The speed parameter should be the baud rate if a COM port is specified (+1 or
++2).  If a parallel port is specified (-1 or -2), this parameter is the delay
+count to use when clocking the background mode interface.  The clock count is
+specified in units of approximately 30 microseconds.  Use the table below to
+determine the proper setting for this parameter:
+
+        CPU32 clock rate        Delay
+        ================        =====
+        2 MHz - 35 MHz            0
+        500 KHz - 2 MHz           1
+        250 KHz - 500 KHz         2
+        130 Khz - 250 KHz         3
+
+The return value is non-zero if no error occurred.  A call to set_commport
+should be followed by a call to init_serial, to complete initialization of the
+serial or parallel port to be used.
+
+=======================
+void init_serial (void)
+=======================
+
+This routine completes the initialization of the selected interface port
+(COM1, COM2, LPT1, or LPT2).  The port must have been previously selected by
+calling set_commport ().
+
+=========================
+void deinit_serial (void)
+=========================
+
+This function disables the current serial or parallel port, if in use.
+
+=======================
+int get_chipmode (void)
+=======================
+
+This routine returns an integer value representing the current state of the
+target system.  The possible values are CHIP_RUNNING, CHIP_STOPPED, or
+CHIP_UNKNOWN.  These values are shown below:
+
+#define CHIP_UNKNOWN    0
+#define CHIP_RUNNING    1
+#define CHIP_STOPPED    2
+
+=====================
+int stop_chip (void)
+=====================
+
+This routine halts execution of the target system and places the target
+MCU in background mode.  The return value is non-zero if the target MCU was
+running when stop_chip () was called, or zero if not.
+
+=================
+int set_fc (void)
+=================
+
+This routine saves the contents of the target's source function code and
+destination function code registers, and then loads them with the function code
+value specified by the 'FC' command.  (Variable name 'fc in the source code).
+The return value is zero if the target MCU already had the SFC/DFC set when
+set_fc () was called, or non-zero if not.
+
+======================
+void restore_fc (void)
+======================
+
+This routine restores the original contents of the target's source function code
+and destination function code registers.
+
+=====================
+void step_chip (void)
+=====================
+
+This routine single-steps the target MCU by one instruction.
+
+======================
+void reset_chip (void)
+======================
+
+This routine performs a hardware reset on the target system.
+
+=====================
+void run_chip (where)
+LONG where;
+=====================
+
+This routine starts execution of the target system at the specified program
+location.  If 'where' is zero, it starts execution at the location contained
+in the target system's program counter.
+
+=======================
+void trash_cache (void)
+=======================
+
+Clears the memory cache of any data which may have been read.  This routine
+should be called each time memory is accessed if memory contents are expected
+to change between accesses.
+
+================
+LONG GETBYTE (x)
+LONG x;
+================
+
+This routine returns the contents of byte location 'x' in target memory.  The
+value returned is cast to a LONG.  This routine will return cached data if
+the address 'x' is found in the cache.
+
+==================
+void PUTBYTE (x,y)
+LONG x;
+BYTE y;
+==================
+
+This routine writes a the value 'y' to the byte location 'x' in the target
+system's memory.  The address and data are also stored in the memory cache
+for subsequent accesses.
+
+===================
+void FILLBYTE (x,y)
+LONG x;
+BYTE y;
+===================
+
+If the BCCDI card is being used on a serial port, this routine is identical
+to PUTBYTE.  If the parallel port adapter circuit is being used, the byte
+is written to memory using the 'FILL' background mode command.  This routine
+must only be used after a PUTBYTE/PUTWORD/PUTLONG function call, since the
+'FILL' command uses a temporary register which must have been set up by a
+'WRITE' command.  This function call is used primarily by the LO command to
+load large blocks of memory quickly, since an address must be transmitted only
+once for each block rather than once for each byte/word/long.
+
+================
+LONG GETWORD (x)
+LONG x;
+================
+
+This routine returns the contents of word location 'x' in target memory.  The
+value returned is cast to a LONG.  This routine will return cached data if
+the address 'x' is found in the cache.
+
+==================
+void PUTWORD (x,y)
+LONG x;
+WORD y;
+==================
+
+This routine writes a the value 'y' to the word location 'x' in the target
+system's memory.  The address and data are also stored in the memory cache
+for subsequent accesses.
+
+===================
+void FILLWORD (x,y)
+LONG x;
+BYTE y;
+===================
+
+If the BCCDI card is being used on a serial port, this routine is identical
+to PUTWORD.  If the parallel port adapter circuit is being used, the word
+is written to memory using the 'FILL' background mode command.  This routine
+must only be used after a PUTBYTE/PUTWORD/PUTLONG function call, since the
+'FILL' command uses a temporary register which must have been set up by a
+'WRITE' command.  This function call is used primarily by the LO command to
+load large blocks of memory quickly, since an address must be transmitted only
+once for each block rather than once for each byte/word/long.
+
+================
+LONG GETLONG (x)
+LONG x;
+================
+
+This routine returns the contents of longword location 'x' in target memory.
+This routine will return cached data if the address 'x' is found in the cache.
+
+==================
+void PUTLONG (x,y)
+LONG x;
+LONG y;
+==================
+
+This routine writes a the value 'y' to the longword location 'x' in the target
+system's memory.  The address and data are also stored in the memory cache
+for subsequent accesses.
+
+===================
+void FILLLONG (x,y)
+LONG x;
+LONG y;
+===================
+
+If the BCCDI card is being used on a serial port, this routine is identical
+to PUTLONG.  If the parallel port adapter circuit is being used, the longword
+is written to memory using the 'FILL' background mode command.  This routine
+must only be used after a PUTBYTE/PUTWORD/PUTLONG function call, since the
+'FILL' command uses a temporary register which must have been set up by a
+'WRITE' command.  This function call is used primarily by the LO command to
+load large blocks of memory quickly, since an address must be transmitted only
+once for each block rather than once for each byte/word/long.
+
+=====================
+LONG GETREG (regname)
+char *regname;
+=====================
+
+This routine returns the value of the cpu register whose name is specified in
+the character string pointed to by 'regname'.  The names used are the same as
+those displayed my the Register Display ('RD') and Register Modify ('RM')
+commands.  The character string containing the register name must always be
+three characters long, padded with trailing spaces, and the register name must
+be in upper case.
+
+==========================
+void PUTREG (regname,data)
+char *regname;
+LONG data;
+==========================
+
+This routine writes the value 'data' to the cpu register whose name is
+specified in the character string pointed to by 'regname'.  The names used
+are the same as those displayed my the Register Display ('RD') and Register
+Modify ('RM') commands.  Formatting requirements for the register names are the
+same as for GETREG above.

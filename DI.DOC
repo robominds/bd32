@@ -1,0 +1,113 @@
+BCCDI Prompt
+============
+
+The BCCDI prompt indicates whether the 68332 is running ('#' prompt) or
+stopped ('%' prompt).  Most commands affecting the MCU, such as
+read/write memory, register, etc, can only execute when the MCU is stopped.
+An error message is displayed if the MCU is running.
+
+BCCDI Command List
+==================
+
+ABORT
+stop target MCU
+
+	This command halts the 68332 by asserting BKPT on the background mode
+	interface.
+
+BR <n> <addr> <mask>
+
+	This command sets an address and mask value into the comparitor
+	register given by <n>.  n may be 0 to 3.  The MSB of the address and
+	mask are composed of several control signals as listed below:
+
+Bit     31      30      29      28      27      26      25      24
+Signal  DS      AS      SIZ1    SIZ0    R/W     FC2     FC1     FC0
+
+	The lower three bytes contain the 24 bit breakpoint address.
+
+CALL <addr>
+call user code patch
+
+	This function calls a user subroutine, stopping the 68332 when an RTS
+	is executed.
+
+ECHO [X]
+turn off/toggle character echo
+
+	ECHO toggles the character echo on the DI serial port.  ECHO X turns
+	off the echo unconditionally.
+
+GO [<addr>]
+start execution at PC or specified address
+
+	GO restarts the aborted MCU.  If an address is specified on the
+	command line, execution resumes from that address, otherwise the
+	contents of the program counter are used as the start of execution.
+
+HELP
+
+	This command was listed in the EVS manual but when I tried it the
+	only response from the DI was "Consult Manual".  Thanks for the help!
+
+NMI
+assert level 7 interrupt on 332
+
+	I haven't tried this one but I assume it works.
+
+NOBR <n>
+disable breakpoint register n
+
+	This (I assume) turns off the breakpoint in the register indicated by
+	n.
+
+MR <size> <address>
+memory read
+
+	This performs a read from memory at the address specified.  The size
+	must also be specified;  either B,W, or L is legal.  The result will
+	be printed in hex.
+
+MW <size> <address> <data>
+memory write
+
+	A memory write is performed at the specified address, with the given
+	size.
+
+PROG
+
+	At the moment I have no idea how this command works.
+
+RC <addr>
+read comparitor
+
+	The specified address in the breakpoint gate array is read and
+	returned as a 32 bit number.  The address may range from 0 to 3F.
+
+RD <regname>
+read CPU register
+
+WR <regname> <value>
+write CPU register
+
+        The contents of the specified CPU register are displayed (written).
+        The name used to specify a register is given below:
+
+	A0 through A6, D0 through D7            use name as is
+	PC (program counter)                    S0
+	VBR (vector base register)              SA
+	SR (status register)                    SB
+	USP (user stack pointer)                SC
+	SSP (system stack pointer)              SD
+	SFC (source function code reg.)         SE
+	DFC (destination function code reg.)    SF
+
+RESET <type>
+
+	The 68332 is reset.  Either a full hardware reset is performed (type
+	= 'H'), or just a software reset (type = 'S').
+
+STAT
+
+	This command will display the status of the Freeze, Halt, and Reset
+	inputs into the 68332.

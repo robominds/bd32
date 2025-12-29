@@ -2,7 +2,6 @@
 
 #include        <stdio.h>
 #include        <ctype.h>
-#include	<conio.h>
 #include	<stdarg.h>
 #include	<string.h>
 
@@ -17,9 +16,9 @@
 #include	"prog-def.h"
 #include	"scrninfo.h"
 
-#include	"newdasm.p"
-#include	"bd32new.p"
-#include	"newsym.p"
+#include	"newdasm.h"
+#include	"bd32new.h"
+#include	"newsym.h"
 
 static LONG dasm_start, dasm_pc;
 static char Output [200];

@@ -1,5 +1,9 @@
 /* scrninfo.h - define ScreenInfo structure */
 
+#pragma once
+
+#include "text_info.h"
+
 struct ScreenInfo
 {
 	void *ScreenMatrix;

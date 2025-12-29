@@ -3,7 +3,6 @@
  */
 
 #include        <stdio.h>
-#include	<conio.h>
 #include        <stdlib.h>
 #include        <memory.h>
 #include        <ctype.h>
@@ -18,9 +17,9 @@
 
 #include	"scrninfo.h"
 #include	"prog-def.h"
-#include	"bd32new.p"
-#include	"newsym.p"
-#include	"target.p"
+#include	"bd32new.h"
+#include	"newsym.h"
+#include	"target.h"
 
 #define         TOKENSIZE       40
 #define         OR_OP           1

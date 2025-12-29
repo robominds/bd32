@@ -1,5 +1,7 @@
 /* color.h - define color attributes */
 
+#pragma once
+
 #define	COMMANDOUTPUTCOLOR	(Attributes [0])
 #define	COMMANDINPUTCOLOR	(Attributes [1])
 #define	PROMPTCOLOR		(Attributes [2])

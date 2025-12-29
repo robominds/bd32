@@ -1,5 +1,7 @@
 /* regnames.h - define target register names */
 
+#pragma once
+
 #define	REG_PC		0
 #define	REG_USP		1
 #define	REG_SSP		2

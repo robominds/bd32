@@ -12,10 +12,8 @@ disk in drive A: to invoke its functions.
 */
 
 #include <stdio.h>
-#include <conio.h>
-#include <dos.h>
 
-#include	"di_error.p"
+#include	"di_error.h"
 
 #define IGNORE  0
 #define RETRY   1

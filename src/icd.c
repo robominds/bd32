@@ -4,14 +4,11 @@
 
 #include	<stdio.h>
 #include	<stdarg.h>
-#include	<mem.h>
-#include	<dos.h>
-#include        "didefs.h"
+#include    "didefs.h"
 #include	"trgtstat.h"
 #include	"trgtinfo.h"
 #include	"regnames.h"
 #include	"bdm-cmds.h"
-#include	"target.p"
 
 #define         BGND    0x4afa          /* BGND opcode */
 
@@ -138,7 +135,7 @@ static void bdm_clrerror (void);
 
 static unsigned ICD_ValidPorts (void)
 {
-	unsigned far *BIOSInfo = BIOSAddress;
+	unsigned int64 *BIOSInfo = BIOSAddress;
 	unsigned result = 0, mask = 1, index = 0;
 
 	while (index < MAXLPT)

@@ -1,7 +1,9 @@
 /* disp-mac.h - define display macros */
 
-extern do_rd (int, char **);
-extern do_disasm (int, char **);
+#pragma once
+
+extern int do_rd (int, char **);
+extern int do_disasm (int, char **);
 
 #define DISPLAYREGISTERS	do_rd (1, (char **) 0)
 #define	DISPLAYCODE		do_disasm (0, (char **) 0)

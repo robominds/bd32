@@ -5,7 +5,6 @@
 
 #include	<stdio.h>
 #include	<ctype.h>
-#include	<conio.h>
 #include	<string.h>
 #include        "didefs.h"
 #include	"sio.h"
@@ -15,8 +14,8 @@
 
 #include	"scrninfo.h"
 #include	"prog-def.h"
-#include	"bd32new.p"
-#include	"target.p"
+#include	"bd32new.h"
+#include	"target.h"
 
 #define	RUNMODECHAR	'#'
 #define	STOPMODECHAR	'%'

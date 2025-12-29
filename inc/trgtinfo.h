@@ -1,7 +1,6 @@
 /* Trgtinfo.h - define TargetInfo structure */
 
-#ifndef	TRGTINFO_H
-#define	TRGTINFO_H
+#pragma once
 
 #include	"didefs.h"
 
@@ -42,5 +41,3 @@ struct TargetInfo
 	LONG (*GetReg) (unsigned which);
 	void (*PutReg) (unsigned which, LONG Data);
 };
-
-#endif

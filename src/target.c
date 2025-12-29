@@ -5,18 +5,17 @@
 
 #include	<setjmp.h>
 #include	<stdio.h>
-#include	<conio.h>
 #include	<string.h>
 #include	"trgtinfo.h"
 #include	"regnames.h"
 #include	"target.h"
 #include	"trgtstat.h"
 
-#include	<conio.h>
 #include	"scrninfo.h"
 #include	"prog-def.h"
-#include	"bd32new.p"
-#include	"target.p"
+#include	"bd32new.h"
+#include	"target.h"
+#include	"stricmp.h"
 
 #define         MAX_ACCESSED    16
 #define         DEF_FC          5       /* default function code to use */
@@ -25,7 +24,6 @@
 static char NotInstalledMessage []
   = "Target port not configured - Use 'Port <port> <speed>' command";
 extern jmp_buf cmd_jmp;
-extern (*abort_func) ();
 extern FILE *infile;
 extern struct TargetInfo EVSInfo, LPTInfo, ICDInfo;
 extern struct text_info CommandLineWindow;
@@ -47,7 +45,7 @@ static struct mem_cache {
 int fc = DEF_FC, fc_set = 0;
 unsigned LastTargetStatus = 0;
 
-static old_sfc, old_dfc;
+static int old_sfc, old_dfc;
 
 static struct TargetInfo NullTarget = {"???", 0, 0, 0, 0, 0},
 			 *Targets [] = {&EVSInfo, &LPTInfo, &ICDInfo, 0};

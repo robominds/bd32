@@ -1,6 +1,5 @@
 /* sio.c - Scott's own interrupt driven serial I/O for the PC */
 
-#include	<dos.h>
 #include	<alloc.h>
 #include	"sio.h"
 

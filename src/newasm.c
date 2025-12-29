@@ -12,9 +12,9 @@
 
 #include	"prog-def.h"
 #include	"scrninfo.h"
-#include	"bd32new.p"
-#include	"newasm.p"
-#include	"newsym.p"
+#include	"bd32new.h"
+#include	"newasm.h"
+#include	"newsym.h"
 
 #define HOST
 

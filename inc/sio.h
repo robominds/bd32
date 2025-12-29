@@ -1,5 +1,7 @@
 /* sio.h - header file for serial I/O routines */
 
+#pragma once
+
 #define	NO_PARITY		0
 #define	ODD_PARITY	0x8
 #define	EVEN_PARITY	0x18

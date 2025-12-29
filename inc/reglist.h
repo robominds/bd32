@@ -1,5 +1,7 @@
 /* reglist.h - define RegList struct */
 
+#pragma once
+
 struct RegList
 {
 	char *RegName;

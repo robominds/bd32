@@ -1,5 +1,7 @@
 /* symbol.h - symbol table definitions for CPU32Bug */
 
+#pragma once
+
 #define SYMTABSIZE      1000	/* number of symbols that can be stored */
 #define SYMHASH         719     /* largest prime < 0.8*SYMTABSIZE */
 #define NAMESIZE        32      /* how many sig characters (+1) in name */

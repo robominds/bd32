@@ -1,5 +1,7 @@
 /* bdm-cmds.h - define BDM commands for CPU32 */
 
+#pragma once
+
 #define         BDM_RDREG       0x2180
 #define         BDM_WRREG       0x2080
 #define         BDM_RSREG       0x2580

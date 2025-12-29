@@ -5,11 +5,7 @@
 #include        <ctype.h>
 #include        <string.h>
 #include        <setjmp.h>
-#include        <dos.h>
-#include        <bios.h>
 #include        <stdarg.h>
-#include	<conio.h>
-#include	<dir.h>
 #include        "didefs.h"
 #include        "digp.h"
 #include        "gpdefine.h"
@@ -24,12 +20,13 @@
 #include	"reglist.h"
 #include	"scrninfo.h"
 
-#include	"bd32new.p"
-#include	"newasm.p"
-#include	"newdasm.p"
-#include	"newsym.p"
-#include	"di_error.p"
-#include	"target.p"
+#include	"bd32new.h"
+#include	"newasm.h"
+#include	"newdasm.h"
+#include	"newsym.h"
+#include	"di_error.h"
+#include	"target.h"
+#include	"stricmp.h"
 
 #define MAXARG  17              /* max no. of arguments */
 #define MAXCMD  128             /* size of command line buffer */

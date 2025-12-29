@@ -1,5 +1,7 @@
 /* prog_def.h - definitions for programming drivers */
 
+#pragma once
+
 struct prog_cmd
 {
 	char *name, *description;

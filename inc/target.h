@@ -1,5 +1,7 @@
 /* target.h - define function calls to target interface */
 
+#pragma once
+
 #include	"trgtinfo.h"
 
 void show_settings (void);

@@ -1,5 +1,7 @@
 /* digp.h - get and put routines prototyped here */
 
+#pragma once
+
 LONG GETBYTE (LONG x);
 void PUTBYTE (LONG x, LONG y);
 void FILLBYTE (LONG x, LONG y);

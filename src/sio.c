@@ -164,7 +164,10 @@ static void RestoreModemStatus (struct sio_data *where)
 			Save->dlm);
 }
 
-void ( uint64_t * _CType SetInterrupt ( unsigned Vector, void  (*NewVector)()))( )
+typedef void (*op_fun)(void);
+
+//void (*foo)(void) SetInterrupt( unsigned Vector, void  (*NewVector)())
+op_fun SetInterrupt( unsigned Vector, void  (*NewVector)())
 {
 	void (*OldVector)() = getvect (Vector);
 

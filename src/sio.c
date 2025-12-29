@@ -1,7 +1,10 @@
 /* sio.c - Scott's own interrupt driven serial I/O for the PC */
 
+#include	<stdint.h>
+#include	<stdio.h>
 #include	<alloc.h>
 #include	"sio.h"
+#include	"subs.h"
 
 #define	INT_REG		0x20		/* interrupt controller acknowledge reg */
 #define	INT_ACK		0x20		/* value required to acknowledge int */
@@ -18,7 +21,7 @@
 #define	BUFFSIZE		256
 #define	CRYSTAL		1843200L	/* 8250 crystal frequency */
 #define	MAXPORTS	4	/* max number of ports we can handle */
-#define	BIOSAddress	((unsigned far *) 0x400)
+#define	BIOSAddress	((uint64_t *) 0x400)
 #define	PORTCOUNT	4
 
 struct ModemStat
@@ -30,7 +33,7 @@ struct ModemStat
 				dlm;		/* divisor latch - msb */
 };
 
-static void interrupt COM1Handler (void), COM2Handler (void),
+static void COM1Handler (void), COM2Handler (void),
 			COM3Handler (void), COM4Handler (void);
 
 static struct sio_data
@@ -40,11 +43,11 @@ static struct sio_data
 			IntMask,
 			Available,
 			Initted;
-	void interrupt (*OurHandler)();
+	void (*OurHandler)();
 	volatile unsigned	GetPtr,
 					PutPtr,
 					ByteCount;
-	void interrupt (*OldVector)();
+	void (*OldVector)();
 	char *InBuffer;
 	struct ModemStat OldStat;
 } Ports [] =
@@ -69,7 +72,7 @@ static struct
 
 unsigned ComPortsInstalled (void)
 {
-	unsigned far *BIOSInfo = BIOSAddress;
+	uint64_t *BIOSInfo = BIOSAddress;
 	unsigned scan, result = 0, mask = 1, index = 0;
 
 	while (index < PORTCOUNT)
@@ -95,7 +98,9 @@ static int GetFlags (void)
 {
 	static int Flags;
 
-	asm pushf; asm pop ax; asm mov Flags, ax
+	__asm__("pushf\n\t"
+		"pop ax\n\t"
+		"mov Flags, ax\n\t");
 	return Flags;
 }
 
@@ -104,7 +109,9 @@ static void SetFlags (int Flags)
 	static int NewFlags;
 
 	NewFlags = Flags;
-	asm mov ax, NewFlags; asm push ax; asm popf
+	__asm__("mov ax, NewFlags\n\t"
+		"push ax\n\t"
+		"popf\n\t");
 }
 
 static void SaveModemStatus (struct sio_data *where)
@@ -157,9 +164,9 @@ static void RestoreModemStatus (struct sio_data *where)
 			Save->dlm);
 }
 
-void interrupt( far * _CType SetInterrupt ( unsigned Vector, void interrupt (*NewVector)()))( )
+void ( uint64_t * _CType SetInterrupt ( unsigned Vector, void  (*NewVector)()))( )
 {
-	void interrupt (*OldVector)() = getvect (Vector);
+	void (*OldVector)() = getvect (Vector);
 
 	setvect (Vector, NewVector);
 	return OldVector;
@@ -270,22 +277,22 @@ static void CharInterrupt (struct sio_data *ThePort)
 	else ThePort->ByteCount++;
 }
 
-static void interrupt COM1Handler (void)
+static void COM1Handler (void)
 {
 	CharInterrupt (&Ports [0]);
 }
 
-static void interrupt COM2Handler (void)
+static void COM2Handler (void)
 {
 	CharInterrupt (&Ports [1]);
 }
 
-static void interrupt COM3Handler (void)
+static void COM3Handler (void)
 {
 	CharInterrupt (&Ports [2]);
 }
 
-static void interrupt COM4Handler (void)
+static void COM4Handler (void)
 {
 	CharInterrupt (&Ports [3]);
 }
